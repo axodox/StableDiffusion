@@ -46,7 +46,7 @@ namespace Axodox::MachineLearning
     //Pad results to a fixed size
     Tensor result{ TensorType::Int32, 1, _maxTokenCount };
 
-    auto sToken = result.At<int32_t>();
+    auto sToken = result.AsPointer<int32_t>();
     auto pToken = sToken;
     for (auto token : outputSpan)
     {
@@ -63,7 +63,7 @@ namespace Axodox::MachineLearning
     Tensor result{ TensorType::Int32, 1, _maxTokenCount };
     memset(result.Buffer.data(), _blankToken, result.Buffer.size());
 
-    *result.At<int32_t>(0) = 49406;
+    *result.AsPointer<int32_t>(0) = 49406;
     return result;
   }
 }

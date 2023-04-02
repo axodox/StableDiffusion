@@ -25,10 +25,10 @@ int main()
   //Create text embeddings
   Tensor textEmbeddings{ TensorType::Single, 2, 77, 768 };
 
-  auto pSourceBlank = encodedBlank.At<float>();
-  auto pSourceText = encodedText.At<float>();
-  auto pTargetBlank = textEmbeddings.At<float>(0);
-  auto pTargetText = textEmbeddings.At<float>(1);
+  auto pSourceBlank = encodedBlank.AsPointer<float>();
+  auto pSourceText = encodedText.AsPointer<float>();
+  auto pTargetBlank = textEmbeddings.AsPointer<float>(0);
+  auto pTargetText = textEmbeddings.AsPointer<float>(1);
 
   auto size = encodedText.Size();
   for (size_t i = 0; i < size; i++)

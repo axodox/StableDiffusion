@@ -36,6 +36,12 @@
     <ClInclude Include="OnnxExtensions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LMSDiscreteScheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StableDiffustionInferer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -57,6 +63,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TensorType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LMSDiscreteScheduler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StableDiffustionInferer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -107,20 +107,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="LMSDiscreteScheduler.h" />
     <ClInclude Include="OnnxEnvironment.h" />
     <ClInclude Include="OnnxExtensions.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="StableDiffustionInferer.h" />
     <ClInclude Include="Tensor.h" />
     <ClInclude Include="TensorType.h" />
     <ClInclude Include="TextEncoder.h" />
     <ClInclude Include="TextTokenizer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LMSDiscreteScheduler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OnnxEnvironment.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="StableDiffustionInferer.cpp" />
     <ClCompile Include="Tensor.cpp" />
     <ClCompile Include="TensorType.cpp" />
     <ClCompile Include="TextEncoder.cpp" />

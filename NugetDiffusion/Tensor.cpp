@@ -7,13 +7,20 @@ using namespace std;
 namespace Axodox::MachineLearning
 {
   Tensor::Tensor() :
-    Shape({ 0, 0, 0, 0 }),
-    Type(TensorType::Unknown)
+    Type(TensorType::Unknown),
+    Shape({ 0, 0, 0, 0 })
   { }
 
   Tensor::Tensor(TensorType type, size_t x, size_t y, size_t z, size_t w) :
-    Shape({x, y, z, w}),
-    Type(type)
+    Type(type),
+    Shape({x, y, z, w})
+  {
+    AllocateBuffer();
+  }
+
+  Tensor::Tensor(TensorType type, shape_t shape) :
+    Type(type),
+    Shape(shape)
   {
     AllocateBuffer();
   }
@@ -93,5 +100,55 @@ namespace Axodox::MachineLearning
     }
 
     return Value::CreateTensor(memoryInfo, const_cast<uint8_t*>(Buffer.data()), Buffer.size(), shape.data(), shape.size(), ToTensorType(Type));
+  }
+
+  const uint8_t* Tensor::AsPointer(size_t x, size_t y, size_t z, size_t w) const
+  {
+    shape_t index{ x, y, z, w };
+
+    auto offset = GetElementSize(Type);
+    for (size_t i = 0; i < Shape.size(); i++)
+    {
+      offset += index[i] * Size(i + 1);
+    }
+
+    if (offset > Buffer.size()) throw out_of_range("Tensor index out of range.");
+
+    return Buffer.data() + offset;
+  }
+
+  uint8_t* Tensor::AsPointer(size_t x, size_t y, size_t z, size_t w)
+  {
+    return const_cast<uint8_t*>(AsPointer(x, y, z, w));
+  }
+  
+  Tensor Tensor::Duplicate(size_t instances) const
+  {
+    Tensor tensor{ Type, Shape[0] * instances, Shape[1], Shape[2], Shape[3] };
+    
+    for (auto i = 0; i < instances; i++)
+    {
+      memcpy(tensor.AsPointer(i), AsPointer(), ByteCount());
+    }
+
+    return tensor;
+  }
+  
+  std::vector<Tensor> Tensor::Split(size_t instances) const
+  {
+    if (Shape[0] % instances != 0) throw invalid_argument("instances");
+
+    auto newShape = Shape;
+    newShape[0] /= instances;
+
+    vector<Tensor> results;
+    results.resize(instances);
+    for (size_t i = 0; auto & result : results)
+    {
+      result = Tensor(Type, newShape);
+      memcpy(result.AsPointer(), AsPointer(i++), result.ByteCount());
+    }
+
+    return results;
   }
 }
