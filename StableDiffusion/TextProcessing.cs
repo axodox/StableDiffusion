@@ -66,7 +66,7 @@ namespace StableDiffusion
             SessionOptions sessionOptions = new SessionOptions();
             //sessionOptions.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_INFO;
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            sessionOptions.AppendExecutionProvider_DML(1);
+            //sessionOptions.AppendExecutionProvider_DML(1);
             var textEncoderOnnxPath = Directory.GetCurrentDirectory().ToString() + ("\\text_encoder\\model.onnx");
 
             var encodeSession = new InferenceSession(textEncoderOnnxPath, sessionOptions);
