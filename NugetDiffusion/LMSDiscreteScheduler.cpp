@@ -33,6 +33,19 @@ namespace Axodox::MachineLearning
     _initialNoiseSigma = CalculateInitialNoiseSigma(_cumulativeAlphas);
   }
 
+  float OnClosedIntegral(const std::function<float(float)>& f, float intervalStart, float intervalEnd, float targetError = 1e-4)
+  {
+    auto stepCount = 100;
+    auto stepSize = (intervalEnd - intervalStart) / stepCount;
+
+    auto result = 0.f;
+    for (auto value = intervalStart; value < intervalEnd; value += stepSize)
+    {
+      result += f(value) * stepSize;
+    }
+    return result;
+  }
+
   LmsDiscreteSchedulerSteps LmsDiscreteScheduler::GetSteps(size_t count) const
   {
     //Calculate timesteps
@@ -52,7 +65,7 @@ namespace Axodox::MachineLearning
     vector<float> sigmas{ _cumulativeAlphas.rbegin(), _cumulativeAlphas.rend() };
     for (auto& sigma : sigmas)
     {
-      sigma = sqrt(1.f - sigma) / sigma;
+      sigma = sqrt((1.f - sigma) / sigma);
     }
 
     vector<float> interpolatedSigmas;
@@ -66,11 +79,44 @@ namespace Axodox::MachineLearning
       interpolatedSigma = lerp(sigmas[previousIndex], sigmas[nextIndex], trainstep - floor(trainstep));
     }
     interpolatedSigmas.push_back(0.f);
+    ranges::reverse(timesteps);
+
+    //Calculate LMS coefficients
+    vector<vector<float>> lmsCoefficients;
+    for (auto i = 0; i < count; i++)
+    {
+      auto order = min(i + 1, 4);
+
+      vector<float> coefficients;
+      for (auto j = 0; j < order; j++)
+      {
+        auto currOrder = j;
+        auto stepIndex = i;
+
+        auto lmsDerivative = [&](float tau) {
+          float prod = 1.f;
+          for (auto k = 0; k < order; k++)
+          {
+            if (currOrder == k)
+            {
+              continue;
+            }
+            prod *= (tau - interpolatedSigmas[stepIndex - k]) / (interpolatedSigmas[stepIndex - currOrder] - interpolatedSigmas[stepIndex - k]);
+          }
+          return prod;
+        };
+
+        coefficients.push_back(-OnClosedIntegral(lmsDerivative, interpolatedSigmas[stepIndex + 1], interpolatedSigmas[stepIndex]));
+      }
+
+      lmsCoefficients.push_back(move(coefficients));
+    }
 
     //Return result
     LmsDiscreteSchedulerSteps result;
     result.Timesteps = move(timesteps);
     result.Sigmas = move(interpolatedSigmas);
+    result.LmsCoefficients = move(lmsCoefficients);
     return result;
   }
 

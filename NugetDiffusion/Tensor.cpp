@@ -118,7 +118,7 @@ namespace Axodox::MachineLearning
     {
       TextureData result{ width, height, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB };
       
-      auto pTarget = result.Row<XMBYTEN4>(0);
+      auto pTarget = result.Row<XMUBYTEN4>(0);
       auto rSource = AsPointer<float>(i, 0);
       auto gSource = AsPointer<float>(i, 1);
       auto bSource = AsPointer<float>(i, 2);
@@ -126,7 +126,8 @@ namespace Axodox::MachineLearning
       {
         for (size_t x = 0u; x < Shape[3]; x++)
         {
-          *pTarget++ = XMBYTEN4{ *rSource++, *gSource++, *rSource++, 1.f };
+          auto result = XMVectorSaturate(XMVectorSet(*bSource++, *gSource++, *rSource++, 1.f) / 2.f + XMVectorReplicate(0.5f));
+          XMStoreUByteN4(pTarget++, result);
         }
       }
 

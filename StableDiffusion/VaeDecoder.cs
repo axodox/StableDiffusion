@@ -15,7 +15,7 @@ namespace StableDiffusion
             SessionOptions sessionOptions = new SessionOptions();
             //sessionOptions.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_INFO;
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            sessionOptions.AppendExecutionProvider_DML(1);
+            sessionOptions.AppendExecutionProvider_DML();
             // Create an InferenceSession from the Model Path.
             var vaeDecodeSession = new InferenceSession(vaeDecoderModelPath, sessionOptions);
 
@@ -42,7 +42,7 @@ namespace StableDiffusion
                     );
                 }
             }
-            result.Save($@"C:/code/StableDiffusion/{imageName}.png");
+            result.Save($@"C:/dev/{imageName}.png");
 
             return result;
         }

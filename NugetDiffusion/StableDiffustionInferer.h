@@ -7,7 +7,7 @@ namespace Axodox::MachineLearning
 {
   struct StableDiffusionOptions
   {
-    size_t StepCount = 20;    
+    size_t StepCount = 15;    
     size_t BatchSize = 1;
     size_t Width = 512;
     size_t Height = 512;

@@ -29,6 +29,7 @@ namespace Axodox::MachineLearning
   {
     std::vector<int32_t> Timesteps;
     std::vector<float> Sigmas;
+    std::vector<std::vector<float>> LmsCoefficients;
   };
 
   class LmsDiscreteScheduler

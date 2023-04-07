@@ -15,7 +15,7 @@ namespace Axodox::MachineLearning
     _floatDistribution(0.f, 1.f)
   {
     OrtSessionOptionsAppendExecutionProvider_DML(_sessionOptions, 0);
-
+    _sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
     _session = { _environment.Environment(), L"C:\\dev\\StableDiffusion\\StableDiffusion\\unet\\model.onnx", _sessionOptions };  
   }
 
@@ -51,7 +51,7 @@ namespace Axodox::MachineLearning
     auto result = 0.f;
     for (auto value = intervalStart; value < intervalEnd; value += stepSize)
     {
-      result = f(value) * stepSize;
+      result += f(value) * stepSize;
     }
     return result;
   }
@@ -83,7 +83,7 @@ namespace Axodox::MachineLearning
       binding.BindInput("sample", scaledSample.ToOrtValue(_environment.MemoryInfo()));
       binding.BindInput("timestep", Tensor(int64_t(steps.Timesteps[i])).ToOrtValue(_environment.MemoryInfo()));
       binding.BindOutput("out_sample", _environment.MemoryInfo());
-
+      
       _session.Run({}, binding);
 
       auto outputs = binding.GetOutputValues();
@@ -99,53 +99,35 @@ namespace Axodox::MachineLearning
       auto stepIndex = i;
       auto sigma = steps.Sigmas[i];
 
-      auto& modelOutput = guidedNoise;
-      auto& sample = latentSample;
+      auto& noisePred = guidedNoise;
+      auto& latents = latentSample;
 
       // 1. compute predicted original sample (x_0) from sigma-scaled predicted noise
       Tensor predictedOriginalSample;
 
       //if(predictionType == "epsilon")
       {
-        predictedOriginalSample = sample.BinaryOperation<float>(modelOutput, [sigma](float a, float b) { return a - sigma * b; });
+        predictedOriginalSample = latents.BinaryOperation<float>(noisePred, [sigma](float a, float b) { return a - sigma * b; });
       }
 
       // 2. Convert to an ODE derivative
-      Tensor derivativeItemsArray = sample.BinaryOperation<float>(predictedOriginalSample, [sigma](float a, float b) { return (a - b) / sigma; });
+      Tensor derivativeItemsArray = latents.BinaryOperation<float>(predictedOriginalSample, [sigma](float a, float b) { return (a - b) / sigma; });
 
       derivatives.push_back(derivativeItemsArray);
       if (derivatives.size() > order) derivatives.pop_front();
 
       // 3. compute linear multistep coefficients
-      auto LmsDerivative = [&steps, order = derivatives.size(), t = stepIndex](float tau, int currentOrder)
-      {
-        float prod = 1.f;
-        for (int k = 0; k < order; k++)
-        {
-          if (currentOrder == k)
-          {
-            continue;
-          }
-          prod *= (tau - steps.Sigmas[t - k]) / (steps.Sigmas[t - currentOrder] - steps.Sigmas[t - k]);
-        }
-        return prod;
-      };
-
-      vector<float> lmsCoeffs;
-      lmsCoeffs.reserve(derivatives.size());
-      for (auto t = 0; t < derivatives.size(); t++)
-      {
-        lmsCoeffs.push_back(ClosedIntegral([&](float tau) { return LmsDerivative(tau, t); }, steps.Sigmas[t + 1], steps.Sigmas[t]));
-      }
-
+      auto& lmsCoeffs = steps.LmsCoefficients[i];
+      
       // 4. compute previous sample based on the derivative path
       // Reverse list of tensors this.derivatives
-      derivatives.reverse();
+      auto revDerivatives = derivatives;
+      revDerivatives.reverse();
 
       // Create list of tuples from the lmsCoeffs and reversed derivatives
       vector<pair<float, Tensor>> lmsCoeffsAndDerivatives;
       lmsCoeffsAndDerivatives.reserve(derivatives.size());
-      for (auto x = 0; auto& derivative : derivatives)
+      for (auto x = 0; auto& derivative : revDerivatives)
       {
         lmsCoeffsAndDerivatives.push_back({ lmsCoeffs[x++], derivative });
       }
@@ -168,7 +150,7 @@ namespace Axodox::MachineLearning
       }
 
       // Add the sumed tensor to the sample
-      auto prevSample = sample.BinaryOperation<float>(sumTensor, [](float a, float b) { return a + b; });
+      auto prevSample = latents.BinaryOperation<float>(sumTensor, [](float a, float b) { return a + b; });
 
       latentSample = prevSample;
     }
@@ -179,8 +161,9 @@ namespace Axodox::MachineLearning
   
   Tensor StableDiffusionInferer::GenerateLatentSample(StableDiffusionContext& context)
   {
-    Tensor result{ TensorType::Single, context.Options.BatchSize, 4, context.Options.Width / 8, context.Options.Height / 8 };
+    Tensor result{ TensorType::Single, context.Options.BatchSize, 4, context.Options.Height / 8, context.Options.Width / 8 };
     
+    auto initialNoiseSigma = context.Scheduler.InitialNoiseSigma();
     for (auto& value : result.AsSpan<float>())
     {
       auto u1 = _floatDistribution(context.Random);
@@ -189,7 +172,7 @@ namespace Axodox::MachineLearning
       auto theta = 2.f * XM_PI * u2;
       auto standardNormalRand = radius * cos(theta);
 
-      value = standardNormalRand * context.Scheduler.InitialNoiseSigma();
+      value = standardNormalRand * initialNoiseSigma;
     }
 
     return result;

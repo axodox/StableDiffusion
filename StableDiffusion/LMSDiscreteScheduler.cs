@@ -138,7 +138,7 @@ namespace StableDiffusion
         }
 
         //python line 135 of scheduling_lms_discrete.py
-        public double GetLmsCoefficient(int order, int t, int currentOrder)
+        public double GetLmsCoefficient(int order, int stepIndex, int currOrder)
         {
             // Compute a linear multistep coefficient.
 
@@ -147,24 +147,24 @@ namespace StableDiffusion
                 double prod = 1.0;
                 for (int k = 0; k < order; k++)
                 {
-                    if (currentOrder == k)
+                    if (currOrder == k)
                     {
                         continue;
                     }
-                    prod *= (tau - this.Sigmas[t - k]) / (this.Sigmas[t - currentOrder] - this.Sigmas[t - k]);
+                    prod *= (tau - this.Sigmas[stepIndex - k]) / (this.Sigmas[stepIndex - currOrder] - this.Sigmas[stepIndex - k]);
                 }
                 return prod;
             }
 
-            double integratedCoeff = Integrate.OnClosedInterval(LmsDerivative, this.Sigmas[t], this.Sigmas[t + 1], 1e-4);
+            double integratedCoeff = Integrate.OnClosedInterval(LmsDerivative, this.Sigmas[stepIndex], this.Sigmas[stepIndex + 1], 1e-4);
 
             return integratedCoeff;
         }
 
         public DenseTensor<float> Step(
-               Tensor<float> modelOutput,
+               Tensor<float> noisePred,
                int timestep,
-               Tensor<float> sample,
+               Tensor<float> latents,
                int order = 4)
         {
             int stepIndex = this.Timesteps.IndexOf(timestep);
@@ -174,18 +174,18 @@ namespace StableDiffusion
             Tensor<float> predOriginalSample;
 
             // Create array of type float length modelOutput.length
-            float[] predOriginalSampleArray = new float[modelOutput.Length];
-            var modelOutPutArray = modelOutput.ToArray();
-            var sampleArray = sample.ToArray();
+            float[] predOriginalSampleArray = new float[noisePred.Length];
+            var noiseArray = noisePred.ToArray();
+            var latentsArray = latents.ToArray();
 
             if (this._predictionType == "epsilon")
             {
 
-                for (int i=0; i < modelOutPutArray.Length; i++)
+                for (int i=0; i < noiseArray.Length; i++)
                 {
-                    predOriginalSampleArray[i] = sampleArray[i] - sigma * modelOutPutArray[i];
+                    predOriginalSampleArray[i] = latentsArray[i] - sigma * noiseArray[i];
                 }
-                predOriginalSample = TensorHelper.CreateTensor(predOriginalSampleArray, modelOutput.Dimensions.ToArray());
+                predOriginalSample = TensorHelper.CreateTensor(predOriginalSampleArray, noisePred.Dimensions.ToArray());
 
             }
             else if (this._predictionType == "v_prediction")
@@ -199,14 +199,14 @@ namespace StableDiffusion
             }
 
             // 2. Convert to an ODE derivative
-            var derivativeItems = new DenseTensor<float>(sample.Dimensions.ToArray());
+            var derivativeItems = new DenseTensor<float>(latents.Dimensions.ToArray());
 
             var derivativeItemsArray = new float[derivativeItems.Length];
             
-            for (int i = 0; i < modelOutPutArray.Length; i++)
+            for (int i = 0; i < noiseArray.Length; i++)
             {
                 //predOriginalSample = (sample - predOriginalSample) / sigma;
-                derivativeItemsArray[i] = (sampleArray[i] - predOriginalSampleArray[i]) / sigma;
+                derivativeItemsArray[i] = (latentsArray[i] - predOriginalSampleArray[i]) / sigma;
             }
             derivativeItems =  TensorHelper.CreateTensor(derivativeItemsArray, derivativeItems.Dimensions.ToArray());
 
@@ -242,7 +242,7 @@ namespace StableDiffusion
             var sumTensor = TensorHelper.SumTensors(lmsDerProduct, new[] { 1, 4, 64, 64 });
 
             // Add the sumed tensor to the sample
-            var prevSample = TensorHelper.AddTensors(sample.ToArray(), sumTensor.ToArray(), sample.Dimensions.ToArray());
+            var prevSample = TensorHelper.AddTensors(latents.ToArray(), sumTensor.ToArray(), latents.Dimensions.ToArray());
 
             Console.WriteLine(prevSample[0]);
             return prevSample;
