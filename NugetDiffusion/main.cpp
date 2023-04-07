@@ -23,7 +23,7 @@ int main()
   auto tokenizedBlank = textTokenizer.GetUnconditionalTokens();
   auto encodedBlank = textEncoder.EncodeText(tokenizedBlank);
 
-  auto tokenizedText = textTokenizer.TokenizeText("a fireplace in an old cabin in the woods");
+  auto tokenizedText = textTokenizer.TokenizeText("beautiful landscape with a mountain and a lake");
   auto encodedText = textEncoder.EncodeText(tokenizedText);
     
   //Create text embeddings
@@ -45,6 +45,7 @@ int main()
   StableDiffusionInferer stableDiffusion{ onnxEnvironment };
 
   StableDiffusionOptions options {
+    .Seed = 100,
     .TextEmbeddings = textEmbeddings
   };
   Tensor latentResult = stableDiffusion.RunInference(options);

@@ -1,5 +1,5 @@
 #pragma once
-#include "pch.h"
+#include "Tensor.h"
 
 namespace Axodox::MachineLearning
 {
@@ -27,9 +27,13 @@ namespace Axodox::MachineLearning
 
   struct LmsDiscreteSchedulerSteps
   {
+    static const int DerivativeOrder;
+
     std::vector<int32_t> Timesteps;
     std::vector<float> Sigmas;
     std::vector<std::vector<float>> LmsCoefficients;
+
+    Tensor ApplyStep(const Tensor& latents, const Tensor& noise, std::list<Tensor>& derivatives, size_t step);
   };
 
   class LmsDiscreteScheduler
@@ -40,8 +44,6 @@ namespace Axodox::MachineLearning
     LmsDiscreteSchedulerSteps GetSteps(size_t count) const;
 
     float InitialNoiseSigma() const;
-
-    void Step(size_t step);
 
   private:
     LmsDiscreteSchedulerOptions _options;

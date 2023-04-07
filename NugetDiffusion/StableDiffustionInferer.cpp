@@ -19,43 +19,6 @@ namespace Axodox::MachineLearning
     _session = { _environment.Environment(), L"C:\\dev\\StableDiffusion\\StableDiffusion\\unet\\model.onnx", _sessionOptions };  
   }
 
-  float ClosedIntegral(const std::function<float(float)>& f, float intervalStart, float intervalEnd, float targetError = 1e-4) 
-  {
-    //float h = intervalEnd - intervalStart;  // step size
-    //float sum = 0.5f * (f(intervalStart) + f(intervalEnd));  // initial sum
-
-    //int iterationCount = 1;  // number of iterations
-    //float actualError = targetError + 1.f;  // initialize actual error
-
-    //while (actualError > targetError) 
-    //{
-    //  float x = intervalStart + 0.5f * h;
-    //  float partialSum = 0.f;
-
-    //  for (int i = 0; i < iterationCount; i++) {
-    //    partialSum += f(x);
-    //    x += h;
-    //  }
-
-    //  sum += partialSum;
-    //  h *= 0.5f;
-    //  iterationCount *= 2;
-    //  actualError = abs(partialSum * h / 3.f);
-    //}
-
-    //return sum * h;
-
-    auto stepCount = 100;
-    auto stepSize = (intervalEnd - intervalStart) / stepCount;
-    
-    auto result = 0.f;
-    for (auto value = intervalStart; value < intervalEnd; value += stepSize)
-    {
-      result += f(value) * stepSize;
-    }
-    return result;
-  }
-
   Tensor StableDiffusionInferer::RunInference(const StableDiffusionOptions& options)
   {
     StableDiffusionContext context{
@@ -63,11 +26,7 @@ namespace Axodox::MachineLearning
       .Random = minstd_rand{options.Seed}
     };
 
-    //
     list<Tensor> derivatives;
-    auto order = 4;
-    //
-
 
     auto latentSample = GenerateLatentSample(context);
     auto textEmbeddings = options.TextEmbeddings.ToOrtValue(_environment.MemoryInfo());
@@ -95,64 +54,7 @@ namespace Axodox::MachineLearning
       auto guidedNoise = blankNoise.BinaryOperation<float>(textNoise, [guidanceScale = options.GuidanceScale](float a, float b) 
         { return a + guidanceScale * (b - a); });
 
-      //
-      auto stepIndex = i;
-      auto sigma = steps.Sigmas[i];
-
-      auto& noisePred = guidedNoise;
-      auto& latents = latentSample;
-
-      // 1. compute predicted original sample (x_0) from sigma-scaled predicted noise
-      Tensor predictedOriginalSample;
-
-      //if(predictionType == "epsilon")
-      {
-        predictedOriginalSample = latents.BinaryOperation<float>(noisePred, [sigma](float a, float b) { return a - sigma * b; });
-      }
-
-      // 2. Convert to an ODE derivative
-      Tensor derivativeItemsArray = latents.BinaryOperation<float>(predictedOriginalSample, [sigma](float a, float b) { return (a - b) / sigma; });
-
-      derivatives.push_back(derivativeItemsArray);
-      if (derivatives.size() > order) derivatives.pop_front();
-
-      // 3. compute linear multistep coefficients
-      auto& lmsCoeffs = steps.LmsCoefficients[i];
-      
-      // 4. compute previous sample based on the derivative path
-      // Reverse list of tensors this.derivatives
-      auto revDerivatives = derivatives;
-      revDerivatives.reverse();
-
-      // Create list of tuples from the lmsCoeffs and reversed derivatives
-      vector<pair<float, Tensor>> lmsCoeffsAndDerivatives;
-      lmsCoeffsAndDerivatives.reserve(derivatives.size());
-      for (auto x = 0; auto& derivative : revDerivatives)
-      {
-        lmsCoeffsAndDerivatives.push_back({ lmsCoeffs[x++], derivative });
-      }
-
-      // Create tensor for product of lmscoeffs and derivatives
-      vector<Tensor> lmsDerProduct;
-      lmsDerProduct.reserve(derivatives.size());
-
-      for (auto& [lmsCoeff, derivative] : lmsCoeffsAndDerivatives)
-      {
-        // Multiply to coeff by each derivatives to create the new tensors
-        lmsDerProduct.push_back(derivative * lmsCoeff);
-      }
-
-      // Sum the tensors
-      Tensor sumTensor{ TensorType::Single, derivativeItemsArray.Shape };
-      for (auto& tensor : lmsDerProduct)
-      {
-        sumTensor.UnaryOperation<float>(tensor, [](float a, float b) { return a + b; });
-      }
-
-      // Add the sumed tensor to the sample
-      auto prevSample = latents.BinaryOperation<float>(sumTensor, [](float a, float b) { return a + b; });
-
-      latentSample = prevSample;
+      latentSample = steps.ApplyStep(latentSample, guidedNoise, derivatives, i);
     }
 
     latentSample = latentSample * (1.0f / 0.18215f);

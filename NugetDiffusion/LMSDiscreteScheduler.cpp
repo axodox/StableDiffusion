@@ -5,6 +5,8 @@ using namespace std;
 
 namespace Axodox::MachineLearning
 {
+  const int LmsDiscreteSchedulerSteps::DerivativeOrder = 4;
+
   LmsDiscreteScheduler::LmsDiscreteScheduler(const LmsDiscreteSchedulerOptions& options) :
     _options(options)
   {
@@ -33,7 +35,7 @@ namespace Axodox::MachineLearning
     _initialNoiseSigma = CalculateInitialNoiseSigma(_cumulativeAlphas);
   }
 
-  float OnClosedIntegral(const std::function<float(float)>& f, float intervalStart, float intervalEnd, float targetError = 1e-4)
+  float IntegrateOverInterval(const std::function<float(float)>& f, float intervalStart, float intervalEnd)
   {
     auto stepCount = 100;
     auto stepSize = (intervalEnd - intervalStart) / stepCount;
@@ -73,10 +75,10 @@ namespace Axodox::MachineLearning
     interpolatedSigmas.resize(count);
     for (size_t i = 0; auto & interpolatedSigma : interpolatedSigmas)
     {
-      auto trainstep = timestepsFloat[i++];
-      auto previousIndex = max(size_t(floor(trainstep)), size_t(0));
-      auto nextIndex = min(size_t(ceil(trainstep)), sigmas.size() - 1);
-      interpolatedSigma = lerp(sigmas[previousIndex], sigmas[nextIndex], trainstep - floor(trainstep));
+      auto trainStep = timestepsFloat[i++];
+      auto previousIndex = max(size_t(floor(trainStep)), size_t(0));
+      auto nextIndex = min(size_t(ceil(trainStep)), sigmas.size() - 1);
+      interpolatedSigma = lerp(sigmas[previousIndex], sigmas[nextIndex], trainStep - floor(trainStep));
     }
     interpolatedSigmas.push_back(0.f);
     ranges::reverse(timesteps);
@@ -85,28 +87,25 @@ namespace Axodox::MachineLearning
     vector<vector<float>> lmsCoefficients;
     for (auto i = 0; i < count; i++)
     {
-      auto order = min(i + 1, 4);
+      auto order = min(i + 1, LmsDiscreteSchedulerSteps::DerivativeOrder);
 
       vector<float> coefficients;
       for (auto j = 0; j < order; j++)
       {
-        auto currOrder = j;
-        auto stepIndex = i;
-
         auto lmsDerivative = [&](float tau) {
-          float prod = 1.f;
+          float product = 1.f;
           for (auto k = 0; k < order; k++)
           {
-            if (currOrder == k)
+            if (j == k)
             {
               continue;
             }
-            prod *= (tau - interpolatedSigmas[stepIndex - k]) / (interpolatedSigmas[stepIndex - currOrder] - interpolatedSigmas[stepIndex - k]);
+            product *= (tau - interpolatedSigmas[i - k]) / (interpolatedSigmas[i - j] - interpolatedSigmas[i - k]);
           }
-          return prod;
+          return product;
         };
 
-        coefficients.push_back(-OnClosedIntegral(lmsDerivative, interpolatedSigmas[stepIndex + 1], interpolatedSigmas[stepIndex]));
+        coefficients.push_back(-IntegrateOverInterval(lmsDerivative, interpolatedSigmas[i + 1], interpolatedSigmas[i]));
       }
 
       lmsCoefficients.push_back(move(coefficients));
@@ -123,11 +122,6 @@ namespace Axodox::MachineLearning
   float LmsDiscreteScheduler::InitialNoiseSigma() const
   {
     return _initialNoiseSigma;
-  }
-
-  void LmsDiscreteScheduler::Step(size_t step)
-  {
-
   }
 
   std::vector<float> LmsDiscreteScheduler::GetLinearBetas() const
@@ -187,5 +181,41 @@ namespace Axodox::MachineLearning
     }
 
     return result;
+  }
+  
+  Tensor LmsDiscreteSchedulerSteps::ApplyStep(const Tensor& latents, const Tensor& noise, list<Tensor>& derivatives, size_t step)
+  {
+    auto sigma = Sigmas[step];
+
+    //Compute predicted original sample (x_0) from sigma-scaled predicted noise
+    auto predictedOriginalSample = latents.BinaryOperation<float>(noise, [sigma](float a, float b) { return a - sigma * b; });
+
+    //Convert to an ODE derivative
+    auto currentDerivative = latents.BinaryOperation<float>(predictedOriginalSample, [sigma](float a, float b) { return (a - b) / sigma; });
+
+    derivatives.push_back(currentDerivative);
+    if (derivatives.size() > DerivativeOrder) derivatives.pop_front();
+
+    //Compute linear multistep coefficients
+    auto& lmsCoefficients = LmsCoefficients[step];
+
+    //Compute previous sample based on the derivative path
+    vector<Tensor> lmsDerivativeProduct;
+    lmsDerivativeProduct.reserve(derivatives.size());
+    for (auto i = 0; auto& derivative : ranges::reverse_view(derivatives))
+    {
+      //Multiply to coeff by each derivatives to create the new tensors
+      lmsDerivativeProduct.push_back(derivative * lmsCoefficients[i++]);
+    }
+
+    //Sum the tensors
+    Tensor lmsDerivativeSum{ TensorType::Single, currentDerivative.Shape };
+    for (auto& tensor : lmsDerivativeProduct)
+    {
+      lmsDerivativeSum.UnaryOperation<float>(tensor, [](float a, float b) { return a + b; });
+    }
+
+    //Add the sumed tensor to the sample
+    return latents.BinaryOperation<float>(lmsDerivativeSum, [](float a, float b) { return a + b; });
   }
 }

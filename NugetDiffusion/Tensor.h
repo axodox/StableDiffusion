@@ -70,7 +70,7 @@ namespace Axodox::MachineLearning
     }
 
     template<typename T>
-    Tensor operator*(T value)
+    Tensor operator*(T value) const
     {
       Tensor result{ *this };
       for (auto& item : result.AsSpan<T>())
@@ -81,7 +81,7 @@ namespace Axodox::MachineLearning
     }
 
     template<typename T>
-    Tensor operator/(T value)
+    Tensor operator/(T value) const
     {
       return *this * (T(1) / value);
     }
