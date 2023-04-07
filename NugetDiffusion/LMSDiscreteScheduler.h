@@ -40,6 +40,8 @@ namespace Axodox::MachineLearning
 
     float InitialNoiseSigma() const;
 
+    void Step(size_t step);
+
   private:
     LmsDiscreteSchedulerOptions _options;
     std::vector<float> _cumulativeAlphas;

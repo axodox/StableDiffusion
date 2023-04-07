@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "TextTokenizer.h"
 #include "TextEncoder.h"
+#include "StableDiffustionInferer.h"
+#include "VaeDecoder.h"
 
 using namespace Axodox::MachineLearning;
 using namespace std;
@@ -36,6 +38,18 @@ int main()
     *pTargetBlank++ = *pSourceBlank++;
     *pTargetText++ = *pSourceText++;
   }
+
+  //Run stable diffusion
+  StableDiffusionInferer stableDiffusion{ onnxEnvironment };
+
+  StableDiffusionOptions options {
+    .TextEmbeddings = textEmbeddings
+  };
+  Tensor latentResult = stableDiffusion.RunInference(options);
+
+  //Decode VAE
+  VaeDecoder vaeDecoder{ onnxEnvironment };
+  auto imageTensor = vaeDecoder.DecodeVae(latentResult);
 
   //
   printf("done.");

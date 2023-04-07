@@ -119,7 +119,7 @@ namespace Axodox::MachineLearning
 
   uint8_t* Tensor::AsPointer(size_t x, size_t y, size_t z, size_t w)
   {
-    return const_cast<uint8_t*>(AsPointer(x, y, z, w));
+    return const_cast<uint8_t*>(static_cast<const Tensor*>(this)->AsPointer(x, y, z, w));
   }
   
   Tensor Tensor::Duplicate(size_t instances) const

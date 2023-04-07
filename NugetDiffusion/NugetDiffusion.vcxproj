@@ -116,6 +116,7 @@
     <ClInclude Include="TensorType.h" />
     <ClInclude Include="TextEncoder.h" />
     <ClInclude Include="TextTokenizer.h" />
+    <ClInclude Include="VaeDecoder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LMSDiscreteScheduler.cpp" />
@@ -129,6 +130,7 @@
     <ClCompile Include="TensorType.cpp" />
     <ClCompile Include="TextEncoder.cpp" />
     <ClCompile Include="TextTokenizer.cpp" />
+    <ClCompile Include="VaeDecoder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

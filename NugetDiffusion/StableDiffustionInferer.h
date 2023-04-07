@@ -28,7 +28,7 @@ namespace Axodox::MachineLearning
   public:
     StableDiffusionInferer(OnnxEnvironment& environment);
 
-    void RunInference(const StableDiffusionOptions& options = {});
+    Tensor RunInference(const StableDiffusionOptions& options = {});
 
   private:
     OnnxEnvironment& _environment;

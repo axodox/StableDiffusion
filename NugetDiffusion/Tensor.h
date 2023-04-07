@@ -39,6 +39,13 @@ namespace Axodox::MachineLearning
     uint8_t* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0);
 
     template<typename T>
+    const T* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0) const
+    {
+      if (ToTensorType<T>() != Type) throw std::bad_cast();
+      return reinterpret_cast<const T*>(AsPointer(x, y, z, w));
+    }
+
+    template<typename T>
     T* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0)
     {
       if (ToTensorType<T>() != Type) throw std::bad_cast();
@@ -83,10 +90,10 @@ namespace Axodox::MachineLearning
     template<typename T>
     Tensor BinaryOperation(const Tensor& other, const std::function<T(T, T)>& operation) const
     {
-      if (Shape() != other.Shape()) throw logic_error("Incompatible tensor shapes.");
-      if (Type() != other.Type()) throw logic_error("Incompatible tensor types.");
+      if (Shape != other.Shape) throw std::logic_error("Incompatible tensor shapes.");
+      if (Type != other.Type) throw std::logic_error("Incompatible tensor types.");
 
-      Tensor result{ Type(), Shape() };
+      Tensor result{ Type, Shape };
 
       auto size = Size();
       auto a = AsPointer<T>();
@@ -94,10 +101,27 @@ namespace Axodox::MachineLearning
       auto c = result.AsPointer<T>();
       for (size_t i = 0; i < size; i++)
       {
-        *c++ = operation(a, b);
+        *c++ = operation(*a++, *b++);
       }
 
       return result;
+    }
+
+    template<typename T>
+    void UnaryOperation(const Tensor& other, const std::function<T(T, T)>& operation)
+    {
+      if (Shape != other.Shape) throw std::logic_error("Incompatible tensor shapes.");
+      if (Type != other.Type) throw std::logic_error("Incompatible tensor types.");
+
+      Tensor result{ Type, Shape };
+
+      auto size = Size();
+      auto a = AsPointer<T>();
+      auto b = other.AsPointer<T>();
+      for (size_t i = 0; i < size; i++)
+      {
+        *a++ = operation(*a++, *b++);
+      }
     }
   };
 }

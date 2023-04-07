@@ -37,12 +37,14 @@ namespace Axodox::MachineLearning
   {
     //Calculate timesteps
     vector<int32_t> timesteps;
+    vector<float> timestepsFloat;
     timesteps.resize(count);
 
     auto step = (_options.TrainStepCount - 1) / float(count - 1);
     for (auto value = 0.f; auto & timestep : timesteps)
     {
       timestep = int32_t(value);
+      timestepsFloat.push_back(value);
       value += step;
     }
 
@@ -58,7 +60,7 @@ namespace Axodox::MachineLearning
     interpolatedSigmas.resize(count);
     for (size_t i = 0; auto & interpolatedSigma : interpolatedSigmas)
     {
-      auto trainstep = timesteps[i++];
+      auto trainstep = timestepsFloat[i++];
       auto previousIndex = max(size_t(floor(trainstep)), size_t(0));
       auto nextIndex = min(size_t(ceil(trainstep)), sigmas.size() - 1);
       interpolatedSigma = lerp(sigmas[previousIndex], sigmas[nextIndex], trainstep - floor(trainstep));
@@ -75,6 +77,11 @@ namespace Axodox::MachineLearning
   float LmsDiscreteScheduler::InitialNoiseSigma() const
   {
     return _initialNoiseSigma;
+  }
+
+  void LmsDiscreteScheduler::Step(size_t step)
+  {
+
   }
 
   std::vector<float> LmsDiscreteScheduler::GetLinearBetas() const
