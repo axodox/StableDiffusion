@@ -3,8 +3,10 @@
 #include "TextEncoder.h"
 #include "StableDiffustionInferer.h"
 #include "VaeDecoder.h"
+#include "Storage/FileIO.h"
 
 using namespace Axodox::MachineLearning;
+using namespace Axodox::Storage;
 using namespace std;
 using namespace winrt;
 
@@ -23,7 +25,7 @@ int main()
 
   auto tokenizedText = textTokenizer.TokenizeText("a fireplace in an old cabin in the woods");
   auto encodedText = textEncoder.EncodeText(tokenizedText);
-
+    
   //Create text embeddings
   Tensor textEmbeddings{ TensorType::Single, 2, 77, 768 };
 
@@ -50,6 +52,10 @@ int main()
   //Decode VAE
   VaeDecoder vaeDecoder{ onnxEnvironment };
   auto imageTensor = vaeDecoder.DecodeVae(latentResult);
+
+  auto imageTexture = imageTensor.ToTextureData();
+  auto pngBuffer = imageTexture[0].ToBuffer();
+  write_file(L"test.png", pngBuffer);
 
   //
   printf("done.");

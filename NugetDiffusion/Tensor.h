@@ -1,5 +1,6 @@
 #pragma once
 #include "TensorType.h"
+#include "Graphics/Textures/TextureData.h"
 
 namespace Axodox::MachineLearning
 {
@@ -34,6 +35,8 @@ namespace Axodox::MachineLearning
 
     static Tensor FromOrtValue(const Ort::Value& value);
     Ort::Value ToOrtValue(Ort::MemoryInfo& memoryInfo) const;
+
+    std::vector<Graphics::TextureData> ToTextureData() const;
 
     const uint8_t* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0) const;
     uint8_t* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0);
@@ -112,15 +115,13 @@ namespace Axodox::MachineLearning
     {
       if (Shape != other.Shape) throw std::logic_error("Incompatible tensor shapes.");
       if (Type != other.Type) throw std::logic_error("Incompatible tensor types.");
-
-      Tensor result{ Type, Shape };
-
+      
       auto size = Size();
       auto a = AsPointer<T>();
       auto b = other.AsPointer<T>();
       for (size_t i = 0; i < size; i++)
       {
-        *a++ = operation(*a++, *b++);
+        *a++ = operation(*a, *b++);
       }
     }
   };

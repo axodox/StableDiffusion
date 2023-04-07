@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "Tensor.h"
 
+using namespace Axodox::Graphics;
+using namespace DirectX;
+using namespace DirectX::PackedVector;
 using namespace Ort;
 using namespace std;
 
@@ -32,7 +35,7 @@ namespace Axodox::MachineLearning
 
   size_t Tensor::ByteCount() const
   {
-    size_t result = GetElementSize(Type);
+    size_t result = Shape[0] > 0 ? GetElementSize(Type) : 0;
 
     for (auto dimension : Shape)
     {
@@ -102,14 +105,46 @@ namespace Axodox::MachineLearning
     return Value::CreateTensor(memoryInfo, const_cast<uint8_t*>(Buffer.data()), Buffer.size(), shape.data(), shape.size(), ToTensorType(Type));
   }
 
+  std::vector<Graphics::TextureData> Tensor::ToTextureData() const
+  {
+    if (Type != TensorType::Single) throw bad_cast();
+
+    vector<TextureData> results;
+    results.reserve(Shape[0]);
+
+    auto width = uint32_t(Shape[2]);
+    auto height = uint32_t(Shape[3]);
+    for (size_t i = 0u; i < Shape[0]; i++)
+    {
+      TextureData result{ width, height, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB };
+      
+      auto pTarget = result.Row<XMBYTEN4>(0);
+      auto rSource = AsPointer<float>(i, 0);
+      auto gSource = AsPointer<float>(i, 1);
+      auto bSource = AsPointer<float>(i, 2);
+      for (size_t y = 0u; y < Shape[2]; y++)
+      {
+        for (size_t x = 0u; x < Shape[3]; x++)
+        {
+          *pTarget++ = XMBYTEN4{ *rSource++, *gSource++, *rSource++, 1.f };
+        }
+      }
+
+      results.push_back(move(result));
+    }
+
+    return results;
+  }
+
   const uint8_t* Tensor::AsPointer(size_t x, size_t y, size_t z, size_t w) const
   {
     shape_t index{ x, y, z, w };
 
-    auto offset = GetElementSize(Type);
+    auto elementSize = GetElementSize(Type);
+    size_t offset = 0;
     for (size_t i = 0; i < Shape.size(); i++)
     {
-      offset += index[i] * Size(i + 1);
+      offset += index[i] * Size(i + 1) * elementSize;
     }
 
     if (offset > Buffer.size()) throw out_of_range("Tensor index out of range.");

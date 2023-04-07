@@ -53,7 +53,8 @@ namespace Axodox::MachineLearning
       *pToken++= int32_t(token);
     }
 
-    memset(pToken, _blankToken, pToken - sToken);
+    auto eToken = result.AsPointer<int32_t>(1);
+    fill(pToken, eToken, _blankToken);
 
     return result;
   }
@@ -61,7 +62,7 @@ namespace Axodox::MachineLearning
   Tensor TextTokenizer::GetUnconditionalTokens()
   {
     Tensor result{ TensorType::Int32, 1, _maxTokenCount };
-    memset(result.Buffer.data(), _blankToken, result.Buffer.size());
+    ranges::fill(result.AsSpan<int32_t>(), _blankToken);
 
     *result.AsPointer<int32_t>(0) = 49406;
     return result;

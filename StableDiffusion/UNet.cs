@@ -72,7 +72,7 @@ namespace StableDiffusion
             var timesteps = scheduler.SetTimesteps(numInferenceSteps);
 
             //  If you use the same seed, you will get the same image result.
-            var seed = new Random().Next();
+            var seed = 0;//new Random().Next();
             //var seed = 329922609;
             Console.WriteLine($"Seed generated: {seed}");
             // create latent tensor
@@ -85,7 +85,7 @@ namespace StableDiffusion
             SessionOptions sessionOptions = new SessionOptions();
             //sessionOptions.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_INFO;
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            sessionOptions.AppendExecutionProvider_DML(1);
+            sessionOptions.AppendExecutionProvider_DML();
 
             // Create Inference Session
             var unetSession = new InferenceSession(modelPath, sessionOptions);

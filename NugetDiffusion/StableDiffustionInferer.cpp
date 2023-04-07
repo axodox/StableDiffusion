@@ -21,29 +21,39 @@ namespace Axodox::MachineLearning
 
   float ClosedIntegral(const std::function<float(float)>& f, float intervalStart, float intervalEnd, float targetError = 1e-4) 
   {
-    float h = intervalEnd - intervalStart;  // step size
-    float sum = 0.5f * (f(intervalStart) + f(intervalEnd));  // initial sum
+    //float h = intervalEnd - intervalStart;  // step size
+    //float sum = 0.5f * (f(intervalStart) + f(intervalEnd));  // initial sum
 
-    int iterationCount = 1;  // number of iterations
-    float actualError = targetError + 1.f;  // initialize actual error
+    //int iterationCount = 1;  // number of iterations
+    //float actualError = targetError + 1.f;  // initialize actual error
 
-    while (actualError > targetError) 
+    //while (actualError > targetError) 
+    //{
+    //  float x = intervalStart + 0.5f * h;
+    //  float partialSum = 0.f;
+
+    //  for (int i = 0; i < iterationCount; i++) {
+    //    partialSum += f(x);
+    //    x += h;
+    //  }
+
+    //  sum += partialSum;
+    //  h *= 0.5f;
+    //  iterationCount *= 2;
+    //  actualError = abs(partialSum * h / 3.f);
+    //}
+
+    //return sum * h;
+
+    auto stepCount = 100;
+    auto stepSize = (intervalEnd - intervalStart) / stepCount;
+    
+    auto result = 0.f;
+    for (auto value = intervalStart; value < intervalEnd; value += stepSize)
     {
-      float x = intervalStart + 0.5f * h;
-      float partialSum = 0.f;
-
-      for (int i = 0; i < iterationCount; i++) {
-        partialSum += f(x);
-        x += h;
-      }
-
-      sum += partialSum;
-      h *= 0.5f;
-      iterationCount *= 2;
-      actualError = abs(partialSum * h);
+      result = f(value) * stepSize;
     }
-
-    return sum * h;
+    return result;
   }
 
   Tensor StableDiffusionInferer::RunInference(const StableDiffusionOptions& options)
@@ -59,19 +69,21 @@ namespace Axodox::MachineLearning
     //
 
 
-    auto latentSample = GenerateLatentSample(context).Duplicate();
+    auto latentSample = GenerateLatentSample(context);
     auto textEmbeddings = options.TextEmbeddings.ToOrtValue(_environment.MemoryInfo());
 
     auto steps = context.Scheduler.GetSteps(options.StepCount);
     for (size_t i = 0; i < steps.Timesteps.size(); i++)
     {
-      auto scaledSample = latentSample / sqrt(steps.Sigmas[i] * steps.Sigmas[i] + 1);
+      printf("Step %d\n", i);
+      auto scaledSample = latentSample.Duplicate() / sqrt(steps.Sigmas[i] * steps.Sigmas[i] + 1);
 
       IoBinding binding{ _session };
       binding.BindInput("encoder_hidden_states", textEmbeddings);
       binding.BindInput("sample", scaledSample.ToOrtValue(_environment.MemoryInfo()));
       binding.BindInput("timestep", Tensor(int64_t(steps.Timesteps[i])).ToOrtValue(_environment.MemoryInfo()));
-      
+      binding.BindOutput("out_sample", _environment.MemoryInfo());
+
       _session.Run({}, binding);
 
       auto outputs = binding.GetOutputValues();
@@ -105,7 +117,7 @@ namespace Axodox::MachineLearning
       if (derivatives.size() > order) derivatives.pop_front();
 
       // 3. compute linear multistep coefficients
-      auto LmsDerivative = [&steps, order, t = stepIndex](float tau, int currentOrder)
+      auto LmsDerivative = [&steps, order = derivatives.size(), t = stepIndex](float tau, int currentOrder)
       {
         float prod = 1.f;
         for (int k = 0; k < order; k++)
@@ -123,7 +135,7 @@ namespace Axodox::MachineLearning
       lmsCoeffs.reserve(derivatives.size());
       for (auto t = 0; t < derivatives.size(); t++)
       {
-        lmsCoeffs.push_back(ClosedIntegral([&](float tau) { return LmsDerivative(tau, t); }, steps.Sigmas[t], steps.Sigmas[t+1]));
+        lmsCoeffs.push_back(ClosedIntegral([&](float tau) { return LmsDerivative(tau, t); }, steps.Sigmas[t + 1], steps.Sigmas[t]));
       }
 
       // 4. compute previous sample based on the derivative path
@@ -135,7 +147,7 @@ namespace Axodox::MachineLearning
       lmsCoeffsAndDerivatives.reserve(derivatives.size());
       for (auto x = 0; auto& derivative : derivatives)
       {
-        lmsCoeffsAndDerivatives.push_back({ lmsCoeffs[x++], derivatives });
+        lmsCoeffsAndDerivatives.push_back({ lmsCoeffs[x++], derivative });
       }
 
       // Create tensor for product of lmscoeffs and derivatives

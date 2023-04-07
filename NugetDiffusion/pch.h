@@ -1,12 +1,11 @@
 ﻿#pragma once
+#include "C:\dev\zpaint\Axodox.Common\pch.h"
 #include <span>
 #include <ranges>
 #include <random>
 #include <functional>
 
 #define NOMINMAX
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Foundation.Collections.h>
 
 #include <DirectXMath.h>
 
