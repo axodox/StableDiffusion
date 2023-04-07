@@ -8,12 +8,9 @@ namespace Axodox::MachineLearning
 {
   VaeDecoder::VaeDecoder(OnnxEnvironment& environment) :
     _environment(environment),
-    _sessionOptions(),
     _session(nullptr)
   {
-    OrtSessionOptionsAppendExecutionProvider_DML(_sessionOptions, 0);
-
-    _session = { _environment.Environment(), L"C:\\dev\\StableDiffusion\\StableDiffusion\\vae_decoder\\model.onnx", _sessionOptions };
+    _session = { _environment.Environment(), (_environment.RootPath() / L"vae_decoder/model.onnx").c_str(), _environment.DefaultSessionOptions() };
   }
 
   Tensor VaeDecoder::DecodeVae(Tensor text)

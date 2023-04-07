@@ -15,7 +15,6 @@ namespace Axodox::MachineLearning
     static const size_t _maxTokenCount;
 
     OnnxEnvironment& _environment;
-    Ort::SessionOptions _sessionOptions;
     Ort::Session _session;
   };
 }

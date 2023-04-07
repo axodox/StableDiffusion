@@ -10,13 +10,10 @@ namespace Axodox::MachineLearning
 {
   StableDiffusionInferer::StableDiffusionInferer(OnnxEnvironment& environment) :
     _environment(environment),
-    _sessionOptions(),
     _session(nullptr),
     _floatDistribution(0.f, 1.f)
   {
-    OrtSessionOptionsAppendExecutionProvider_DML(_sessionOptions, 0);
-    _sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
-    _session = { _environment.Environment(), L"C:\\dev\\StableDiffusion\\StableDiffusion\\unet\\model.onnx", _sessionOptions };  
+    _session = { _environment.Environment(), (_environment.RootPath() / L"unet/model.onnx").c_str(), _environment.DefaultSessionOptions() };
   }
 
   Tensor StableDiffusionInferer::RunInference(const StableDiffusionOptions& options)

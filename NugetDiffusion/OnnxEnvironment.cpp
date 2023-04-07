@@ -5,10 +5,19 @@ using namespace Ort;
 
 namespace Axodox::MachineLearning
 {
-  OnnxEnvironment::OnnxEnvironment() :
+  OnnxEnvironment::OnnxEnvironment(const std::filesystem::path& rootPath) :
+    _rootPath(rootPath),
     _environment(),
     _memoryInfo(MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeDefault))
-  { }
+  {
+    _defaultSessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
+    OrtSessionOptionsAppendExecutionProvider_DML(_defaultSessionOptions, 0);
+  }
+
+  const std::filesystem::path& OnnxEnvironment::RootPath() const
+  {
+    return _rootPath;
+  }
 
   Ort::Env& OnnxEnvironment::Environment()
   {
@@ -18,5 +27,10 @@ namespace Axodox::MachineLearning
   Ort::MemoryInfo& OnnxEnvironment::MemoryInfo()
   {
     return _memoryInfo;
+  }
+
+  Ort::SessionOptions& OnnxEnvironment::DefaultSessionOptions()
+  {
+    return _defaultSessionOptions;
   }
 }

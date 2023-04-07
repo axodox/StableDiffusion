@@ -15,8 +15,8 @@ namespace Axodox::MachineLearning
     _sessionOptions(),
     _session(nullptr)
   {
-    _sessionOptions.RegisterCustomOpsLibrary(L"C:\\dev\\StableDiffusion\\StableDiffusion\\ortextensions.dll");
-    _session = { _environment.Environment(), L"C:\\dev\\StableDiffusion\\StableDiffusion\\text_tokenizer\\custom_op_cliptok.onnx", _sessionOptions };
+    _sessionOptions.RegisterCustomOpsLibrary((_environment.RootPath() / L"ortextensions.dll").c_str());
+    _session = { _environment.Environment(), (_environment.RootPath() / L"text_tokenizer/custom_op_cliptok.onnx").c_str(), _sessionOptions};
   }
 
   Tensor TextTokenizer::TokenizeText(const std::string_view text)

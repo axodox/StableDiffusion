@@ -13,7 +13,6 @@ namespace Axodox::MachineLearning
 
   private:
     OnnxEnvironment& _environment;
-    Ort::SessionOptions _sessionOptions;
     Ort::Session _session;
   };
 }

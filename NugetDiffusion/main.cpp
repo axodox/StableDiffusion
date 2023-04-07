@@ -14,7 +14,7 @@ int main()
 {
   init_apartment();
   
-  OnnxEnvironment onnxEnvironment{};
+  OnnxEnvironment onnxEnvironment{ L"C:\\dev\\StableDiffusion\\StableDiffusion\\" };
   
   //Encode text
   TextTokenizer textTokenizer{ onnxEnvironment };
@@ -56,8 +56,8 @@ int main()
 
   auto imageTexture = imageTensor.ToTextureData();
   auto pngBuffer = imageTexture[0].ToBuffer();
-  write_file(L"test.png", pngBuffer);
+  write_file(L"bin/test.png", pngBuffer);
 
-  //
+  //Done
   printf("done.");
 }

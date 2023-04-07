@@ -32,7 +32,6 @@ namespace Axodox::MachineLearning
 
   private:
     OnnxEnvironment& _environment;
-    Ort::SessionOptions _sessionOptions;
     Ort::Session _session;
 
     std::uniform_real_distribution<float> _floatDistribution;
