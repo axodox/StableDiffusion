@@ -36,6 +36,8 @@ namespace Axodox::MachineLearning
     static Tensor FromOrtValue(const Ort::Value& value);
     Ort::Value ToOrtValue(Ort::MemoryInfo& memoryInfo) const;
 
+    void UpdateOrtValue(Ort::Value& value);
+
     std::vector<Graphics::TextureData> ToTextureData() const;
 
     const uint8_t* AsPointer(size_t x = 0, size_t y = 0, size_t z = 0, size_t w = 0) const;
@@ -124,5 +126,7 @@ namespace Axodox::MachineLearning
         *a++ = operation(*a, *b++);
       }
     }
+
+    static std::pair<TensorType, Tensor::shape_t> ToTypeAndShape(const Ort::TensorTypeAndShapeInfo& info);
   };
 }

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "StableDiffustionInferer.h"
 #include "VaeDecoder.h"
+#include "OnnxModelStatistics.h"
 
 using namespace DirectX;
 using namespace Ort;
@@ -14,6 +15,7 @@ namespace Axodox::MachineLearning
     _floatDistribution(0.f, 1.f)
   {
     _session = { _environment.Environment(), (_environment.RootPath() / L"unet/model.onnx").c_str(), _environment.DefaultSessionOptions() };
+    OnnxPrintStatistics(_environment, _session);
   }
 
   Tensor StableDiffusionInferer::RunInference(const StableDiffusionOptions& options)
@@ -29,17 +31,19 @@ namespace Axodox::MachineLearning
     auto textEmbeddings = options.TextEmbeddings.ToOrtValue(_environment.MemoryInfo());
 
     auto steps = context.Scheduler.GetSteps(options.StepCount);
+
+    IoBinding binding{ _session };
+    binding.BindOutput("out_sample", _environment.MemoryInfo());
+    binding.BindInput("encoder_hidden_states", textEmbeddings);
+
     for (size_t i = 0; i < steps.Timesteps.size(); i++)
     {
-      printf("Step %d\n", i);
+      printf("Step %zd\n", i);
       auto scaledSample = latentSample.Duplicate() / sqrt(steps.Sigmas[i] * steps.Sigmas[i] + 1);
 
-      IoBinding binding{ _session };
-      binding.BindInput("encoder_hidden_states", textEmbeddings);
       binding.BindInput("sample", scaledSample.ToOrtValue(_environment.MemoryInfo()));
-      binding.BindInput("timestep", Tensor(int64_t(steps.Timesteps[i])).ToOrtValue(_environment.MemoryInfo()));
-      binding.BindOutput("out_sample", _environment.MemoryInfo());
-      
+      binding.BindInput("timestep", Tensor(steps.Timesteps[i]).ToOrtValue(_environment.MemoryInfo()));
+
       _session.Run({}, binding);
 
       auto outputs = binding.GetOutputValues();

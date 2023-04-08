@@ -67,25 +67,33 @@ namespace Axodox::MachineLearning
     return result;
   }
 
-  Tensor Tensor::FromOrtValue(const Ort::Value& value)
+  std::pair<TensorType, Tensor::shape_t> Tensor::ToTypeAndShape(const Ort::TensorTypeAndShapeInfo& info)
   {
-    auto info = value.GetTensorTypeAndShapeInfo();
+    pair<TensorType, Tensor::shape_t> result;
 
-    Tensor result;
+    //Convert type
+    result.first = ToTensorType(info.GetElementType());
 
-    //Set shape
+    //Convert shape
     auto shape = info.GetShape();
-    if (shape.size() > result.Shape.size()) throw logic_error("Tensor does not support more than 4 dimensions.");
+    if (shape.size() > result.second.size()) throw logic_error("Tensor does not support more than 4 dimensions.");
 
     for (auto i = 0; auto dimension : shape)
     {
-      if (dimension > 0) result.Shape[i++] = size_t(dimension);
+      if (dimension > 0) result.second[i++] = size_t(dimension);
     }
 
-    //Set type
-    result.Type = ToTensorType(info.GetElementType());
+    return result;
+  }
 
-    //Allocate buffer
+  Tensor Tensor::FromOrtValue(const Ort::Value& value)
+  {
+    Tensor result;
+
+    //Set type and shape
+    auto info = ToTypeAndShape(value.GetTensorTypeAndShapeInfo());
+    result.Type = info.first;
+    result.Shape = info.second;
     result.AllocateBuffer();
 
     //Copy data
@@ -103,6 +111,15 @@ namespace Axodox::MachineLearning
     }
 
     return Value::CreateTensor(memoryInfo, const_cast<uint8_t*>(Buffer.data()), Buffer.size(), shape.data(), shape.size(), ToTensorType(Type));
+  }
+
+  void Tensor::UpdateOrtValue(Ort::Value& value)
+  {
+    auto info = ToTypeAndShape(value.GetTensorTypeAndShapeInfo());
+    if (info.first != Type || info.second != Shape) throw bad_cast();
+    
+    auto data = value.GetTensorMutableRawData();
+    memcpy(data, AsPointer(), ByteCount());
   }
 
   std::vector<Graphics::TextureData> Tensor::ToTextureData() const

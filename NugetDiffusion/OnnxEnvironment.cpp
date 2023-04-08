@@ -10,7 +10,12 @@ namespace Axodox::MachineLearning
     _environment(),
     _memoryInfo(MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeDefault))
   {
+    _environment.UpdateEnvWithCustomLogLevel(ORT_LOGGING_LEVEL_WARNING);
+    
+    _defaultSessionOptions.SetExecutionMode(ExecutionMode::ORT_PARALLEL);
     _defaultSessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
+
+    //OrtSessionOptionsAppendExecutionProvider_CUDA(_defaultSessionOptions, 0);
     OrtSessionOptionsAppendExecutionProvider_DML(_defaultSessionOptions, 0);
   }
 

@@ -29,7 +29,7 @@ namespace Axodox::MachineLearning
   {
     static const int DerivativeOrder;
 
-    std::vector<int32_t> Timesteps;
+    std::vector<float> Timesteps;
     std::vector<float> Sigmas;
     std::vector<std::vector<float>> LmsCoefficients;
 

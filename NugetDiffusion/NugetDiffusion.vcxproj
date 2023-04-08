@@ -131,6 +131,7 @@
     <ClInclude Include="LMSDiscreteScheduler.h" />
     <ClInclude Include="OnnxEnvironment.h" />
     <ClInclude Include="OnnxExtensions.h" />
+    <ClInclude Include="OnnxModelStatistics.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="StableDiffustionInferer.h" />
     <ClInclude Include="Tensor.h" />
@@ -143,6 +144,7 @@
     <ClCompile Include="LMSDiscreteScheduler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OnnxEnvironment.cpp" />
+    <ClCompile Include="OnnxModelStatistics.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

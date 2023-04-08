@@ -51,15 +51,13 @@ namespace Axodox::MachineLearning
   LmsDiscreteSchedulerSteps LmsDiscreteScheduler::GetSteps(size_t count) const
   {
     //Calculate timesteps
-    vector<int32_t> timesteps;
-    vector<float> timestepsFloat;
+    vector<float> timesteps;
     timesteps.resize(count);
 
     auto step = (_options.TrainStepCount - 1) / float(count - 1);
     for (auto value = 0.f; auto & timestep : timesteps)
     {
-      timestep = int32_t(value);
-      timestepsFloat.push_back(value);
+      timestep = value;
       value += step;
     }
 
@@ -75,7 +73,7 @@ namespace Axodox::MachineLearning
     interpolatedSigmas.resize(count);
     for (size_t i = 0; auto & interpolatedSigma : interpolatedSigmas)
     {
-      auto trainStep = timestepsFloat[i++];
+      auto trainStep = timesteps[i++];
       auto previousIndex = max(size_t(floor(trainStep)), size_t(0));
       auto nextIndex = min(size_t(ceil(trainStep)), sigmas.size() - 1);
       interpolatedSigma = lerp(sigmas[previousIndex], sigmas[nextIndex], trainStep - floor(trainStep));
